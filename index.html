@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة الأفعى</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            border: 2px solid #fff;
+            background-color: #2c3e50;
+        }
+        .controls {
+            display: none;
+            margin-top: 20px;
+        }
+        .controls button {
+            padding: 15px;
+            font-size: 20px;
+            margin: 5px;
+            background-color: #3498db;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .controls button:active {
+            background-color: #2980b9;
+        }
+        @media (max-width: 600px) {
+            .controls {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .controls button {
+                width: 80px;
+                height: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div class="controls">
+            <button id="upButton">↑</button>
+            <div>
+                <button id="leftButton">←</button>
+                <button id="rightButton">→</button>
+            </div>
+            <button id="downButton">↓</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+
+        let snake = [{ x: 10, y: 10 }];
+        let food = { x: 5, y: 5 };
+        let direction = { x: 0, y: 0 };
+        let score = 0;
+        let speed = 150; // السرعة الابتدائية (كلما زاد الرقم، كانت السرعة أبطأ)
+        let level = 1;
+        let gameInterval;
+
+        function drawSnake() {
+            ctx.fillStyle = "#27ae60";
+            ctx.strokeStyle = "#2ecc71";
+            snake.forEach((segment, index) => {
+                ctx.beginPath();
+                ctx.arc(
+                    segment.x * gridSize + gridSize / 2,
+                    segment.y * gridSize + gridSize / 2,
+                    gridSize / 2,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+                ctx.stroke();
+
+                // رسم خطوط بين أجزاء الثعبان
+                if (index > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(
+                        snake[index - 1].x * gridSize + gridSize / 2,
+                        snake[index - 1].y * gridSize + gridSize / 2
+                    );
+                    ctx.lineTo(
+                        segment.x * gridSize + gridSize / 2,
+                        segment.y * gridSize + gridSize / 2
+                    );
+                    ctx.strokeStyle = "#27ae60";
+                    ctx.lineWidth = gridSize / 2;
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function drawFood() {
+            ctx.fillStyle = "#e74c3c";
+            ctx.beginPath();
+            ctx.arc(
+                food.x * gridSize + gridSize / 2,
+                food.y * gridSize + gridSize / 2,
+                gridSize / 2,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        }
+
+        function update() {
+            const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+
+            // التحقق من الاصطدام بالجدران
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                resetGame();
+                return;
+            }
+
+            // التحقق من الاصطدام بالنفس
+            if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                resetGame();
+                return;
+            }
+
+            snake.unshift(head);
+
+            // التحقق من أكل الطعام
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                if (score % 5 === 0) {
+                    level++;
+                    speed = Math.max(50, speed - 10); // زيادة السرعة كل 5 نقاط
+                    clearInterval(gameInterval); // إيقاف الفاصل الزمني الحالي
+                    gameInterval = setInterval(gameLoop, speed); // بدء فاصل زمني جديد بالسرعة المحدثة
+                }
+                food = {
+                    x: Math.floor(Math.random() * tileCount),
+                    y: Math.floor(Math.random() * tileCount)
+                };
+            } else {
+                snake.pop();
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawSnake();
+            drawFood();
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.fillText("النقاط: " + score, 10, 20);
+            ctx.fillText("المستوى: " + level, 10, 40);
+            ctx.fillText("السرعة: " + (200 - speed), 10, 60); // عرض السرعة (كلما قل الرقم، زادت السرعة)
+        }
+
+        function resetGame() {
+            snake = [{ x: 10, y: 10 }];
+            direction = { x: 0, y: 0 };
+            score = 0;
+            level = 1;
+            speed = 150;
+            clearInterval(gameInterval); // إيقاف الفاصل الزمني الحالي
+            gameInterval = setInterval(gameLoop, speed); // بدء فاصل زمني جديد بالسرعة الابتدائية
+            food = {
+                x: Math.floor(Math.random() * tileCount),
+                y: Math.floor(Math.random() * tileCount)
+            };
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+        }
+
+        // التحكم باستخدام لوحة المفاتيح
+        window.addEventListener("keydown", e => {
+            switch (e.key) {
+                case "ArrowUp":
+                    if (direction.y === 0) direction = { x: 0, y: -1 }; // منع الحركة العكسية
+                    break;
+                case "ArrowDown":
+                    if (direction.y === 0) direction = { x: 0, y: 1 }; // منع الحركة العكسية
+                    break;
+                case "ArrowLeft":
+                    if (direction.x === 0) direction = { x: -1, y: 0 }; // منع الحركة العكسية
+                    break;
+                case "ArrowRight":
+                    if (direction.x === 0) direction = { x: 1, y: 0 }; // منع الحركة العكسية
+                    break;
+            }
+        });
+
+        // التحكم باستخدام الأزرار على الهاتف
+        document.getElementById("upButton").addEventListener("click", () => {
+            if (direction.y === 0) direction = { x: 0, y: -1 }; // منع الحركة العكسية
+        });
+        document.getElementById("downButton").addEventListener("click", () => {
+            if (direction.y === 0) direction = { x: 0, y: 1 }; // منع الحركة العكسية
+        });
+        document.getElementById("leftButton").addEventListener("click", () => {
+            if (direction.x === 0) direction = { x: -1, y: 0 }; // منع الحركة العكسية
+        });
+        document.getElementById("rightButton").addEventListener("click", () => {
+            if (direction.x === 0) direction = { x: 1, y: 0 }; // منع الحركة العكسية
+        });
+
+        // بدء اللعبة
+        resetGame();
+    </script>
+</body>
+</html>
